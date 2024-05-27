@@ -7,6 +7,8 @@ import * as bookcarsTypes from ':bookcars-types'
 import * as env from '../config/env.config'
 import * as helper from '../common/helper'
 import Booking from '../models/Booking'
+import User from '../models/User'
+import * as bookingController from './bookingController'
 
 /**
  * Create Checkout Session.
@@ -57,7 +59,7 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
               name,
             },
             unit_amount: Math.floor(amount * 100),
-            currency,
+            currency: currency.toLowerCase(),
           },
           quantity: 1,
         },
@@ -65,7 +67,7 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
       mode: 'payment',
       return_url: `${helper.trimEnd(env.FRONTEND_HOST, '/')}/checkout-session/{CHECKOUT_SESSION_ID}`,
       customer: customer.id,
-      locale: locale as Stripe.Checkout.SessionCreateParams.Locale,
+      locale: helper.getStripeLocale(locale),
       payment_intent_data: {
         description,
       },
@@ -127,6 +129,36 @@ export const checkCheckoutSession = async (req: Request, res: Response) => {
       booking.expireAt = undefined
       booking.status = bookcarsTypes.BookingStatus.Paid
       await booking.save()
+
+      // Send confirmation email
+      const user = await User.findById(booking.driver)
+      if (!user) {
+        logger.info(`Driver ${booking.driver} not found`)
+        return res.sendStatus(204)
+      }
+
+      if (!await bookingController.confirm(user, booking, false)) {
+        return res.sendStatus(400)
+      }
+
+      // Notify supplier
+      const supplier = await User.findById(booking.supplier)
+      if (!supplier) {
+        logger.info(`Supplier ${booking.supplier} not found`)
+        return res.sendStatus(204)
+      }
+      i18n.locale = supplier.language
+      let message = i18n.t('BOOKING_PAID_NOTIFICATION')
+      await bookingController.notify(user, booking.id, supplier, message)
+
+      // Notify admin
+      const admin = !!env.ADMIN_EMAIL && await User.findOne({ email: env.ADMIN_EMAIL, type: bookcarsTypes.UserType.Admin })
+      if (admin) {
+        i18n.locale = admin.language
+        message = i18n.t('BOOKING_PAID_NOTIFICATION')
+        await bookingController.notify(user, booking.id, admin, message)
+      }
+
       return res.sendStatus(200)
     }
 
@@ -183,7 +215,7 @@ export const createPaymentIntent = async (req: Request, res: Response) => {
       // For example, to charge 10 USD, provide an amount value of 1000 (that is, 1000 cents).
       //
       amount: Math.floor(amount * 100),
-      currency,
+      currency: currency.toLowerCase(),
       receipt_email: receiptEmail,
       description,
       customer: customer.id,

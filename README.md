@@ -1,14 +1,10 @@
 [![build](https://github.com/aelassas/bookcars/actions/workflows/build.yml/badge.svg)](https://github.com/aelassas/bookcars/actions/workflows/build.yml) [![test](https://github.com/aelassas/bookcars/actions/workflows/test.yml/badge.svg)](https://github.com/aelassas/bookcars/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/aelassas/bookcars/graph/badge.svg?token=FSB0H9RDEQ)](https://codecov.io/gh/aelassas/bookcars) [![](https://img.shields.io/badge/docs-wiki-brightgreen)](https://github.com/aelassas/bookcars/wiki) [![](https://img.shields.io/badge/live-demo-brightgreen)](https://github.com/aelassas/bookcars?tab=readme-ov-file#live-demo)
 
-## Preface
-
-As of 30<sup>th</sup> April 2024, Stripe Payment Gateway integration was successfully implemented in the frontend, the backend and the mobile app, and is fully operational. You can download the demo mobile app, and find the frontend and backend demo links [here](https://github.com/aelassas/bookcars?tab=readme-ov-file#live-demo).
-
 ## BookCars
 
-BookCars is a fully functional car rental platform with operational Stripe Payment Gateway, supplier-oriented, with a backend for managing car fleets and bookings, as well as a frontend and a mobile app for renting cars.
+BookCars is a car rental platform, supplier-oriented, with a backend for managing car fleets and bookings, as well as a frontend and a mobile app for renting cars.
 
-BookCars is designed to work with multiple suppliers. Each supplier can manage his car fleet and bookings from the backend. BookCars can also work with only one supplier as well.
+BookCars is designed to work with multiple suppliers. Each supplier can manage his car fleet and bookings from the backend. BookCars can also work with only one supplier and can be used as a car rental aggregator.
 
 From the backend, admins can create and manage suppliers, cars, locations, customers and bookings.
 
@@ -28,7 +24,7 @@ BookCars can run in a Docker container. Follow this step by step [guide](https:/
 * Booking management
 * Payment management
 * Customer management
-* Multiple payment methods (Credit Card, Pay Later)
+* Multiple payment methods (Credit Card, PayPal, Google Pay, Apple Pay, Link, Pay Later)
 * Operational Stripe Payment Gateway
 * Multiple language support (English, French)
 * Multiple pagination options (Classic pagination with next and previous buttons, infinite scroll)
@@ -52,25 +48,7 @@ BookCars can run in a Docker container. Follow this step by step [guide](https:/
 
 ### Mobile App
 
-You can install the Android app on any Android device.
-
-#### Scan this code with a device
-
-Open the Camera app and point it at this code. Then tap the notification that appears.
-
-![Mobile App Demo QR Code](https://bookcars.github.io/content/bookcars-3.7-qr-code.png)
-
-#### How to install the Mobile App on Android
-
-* On devices running Android 8.0 (API level 26) and higher, you must navigate to the Install unknown apps system settings screen to enable app installations from a particular location (i.e. the web browser you are downloading the app from).
-
-* On devices running Android 7.1.1 (API level 25) and lower, you should enable the Unknown sources system setting, found in Settings > Security on your device.
-
-#### Alternative Way
-
-You can also install the Android App by directly downloading the APK and installing it on an Android device.
-
-* [Download APK](https://expo.dev/artifacts/eas/2ZqDse8Qr4YCXKGsxXoQHW.apk)
+* [Download APK](https://github.com/aelassas/bookcars/releases/download/v4.1/bookcars-4.1.apk)
 * Login: jdoe@bookcars.ma
 * Password: B00kC4r5
 

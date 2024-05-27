@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 import * as bookcarsTypes from ':bookcars-types'
 import * as bookcarsHelper from ':bookcars-helper'
-import Master from '../components/Master'
+import Layout from '../components/Layout'
 import { strings as commonStrings } from '../lang/common'
 import { strings as clStrings } from '../lang/create-location'
 import { strings } from '../lang/update-location'
@@ -116,8 +116,8 @@ const UpdateLocation = () => {
       setLoading(true)
 
       const params = new URLSearchParams(window.location.search)
-      if (params.has('l')) {
-        const id = params.get('l')
+      if (params.has('loc')) {
+        const id = params.get('loc')
         if (id && id !== '') {
           try {
             const _location = await LocationService.getLocation(id)
@@ -160,7 +160,7 @@ const UpdateLocation = () => {
   }
 
   return (
-    <Master onLoad={onLoad} strict>
+    <Layout onLoad={onLoad} strict>
       {!error && !noMatch && location && location.values && (
         <div className="update-location">
           <Paper className="location-form location-form-wrapper" elevation={10} style={visible ? {} : { display: 'none' }}>
@@ -171,7 +171,7 @@ const UpdateLocation = () => {
             </h1>
             <form onSubmit={handleSubmit}>
               {location.values.map((value, index) => (
-                <FormControl key={value.value} fullWidth margin="dense">
+                <FormControl key={value.language} fullWidth margin="dense">
                   <InputLabel className="required">{env._LANGUAGES.filter((l) => l.code === value.language)[0].label}</InputLabel>
                   <Input
                     type="text"
@@ -205,7 +205,7 @@ const UpdateLocation = () => {
       {loading && <Backdrop text={commonStrings.PLEASE_WAIT} />}
       {error && <Error />}
       {noMatch && <NoMatch hideHeader />}
-    </Master>
+    </Layout>
   )
 }
 

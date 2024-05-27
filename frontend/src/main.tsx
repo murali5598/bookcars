@@ -18,11 +18,7 @@ import 'react-toastify/dist/ReactToastify.min.css'
 import './assets/css/common.css'
 import './assets/css/index.css'
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-)
-
-if (process.env.REACT_APP_NODE_ENV === 'production') {
+if (import.meta.env.VITE_NODE_ENV === 'production') {
   disableDevTools()
 }
 
@@ -66,6 +62,37 @@ if (lang) {
     commonStrings.setLanguage(language)
   } catch (err) {
     helper.error(err, commonStrings.CHANGE_LANGUAGE_ERROR)
+  }
+} else {
+  //
+  // If language not set, set language by IP
+  //
+  let storedLang
+
+  if (user && user.language) {
+    storedLang = user.language
+  } else {
+    const slang = localStorage.getItem('bc-language')
+    if (slang && slang.length === 2) {
+      storedLang = slang
+    }
+  }
+
+  const updateLang = (_lang: string) => {
+    UserService.setLanguage(_lang)
+    commonStrings.setLanguage(_lang)
+  }
+
+  if (env.SET_LANGUAGE_FROM_IP && !storedLang) {
+    const country = await UserService.getCountryFromIP()
+
+    if (country === 'France' || country === 'Morocco') {
+      updateLang('fr')
+    } else if (country === 'Greece') {
+      updateLang('el')
+    } else {
+      updateLang(env.DEFAULT_LANGUAGE)
+    }
   }
 }
 
@@ -150,7 +177,7 @@ const theme = createTheme(
   isFr ? corefrFR : coreenUS,
 )
 
-root.render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider theme={theme}>
     <CssBaseline>
       <App />

@@ -123,7 +123,7 @@ const LocationList = ({
         }
       }
     }
-  }, [fetch, loading, page, keyword]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetch, loading, page, keyword])
 
   const handleDelete = async (e: React.MouseEvent<HTMLElement>) => {
     try {
@@ -210,7 +210,7 @@ const LocationList = ({
             </Card>
           )
         ) : (
-          <List>
+          <List className="location-list-items">
             {rows.map((location, index) => (
               <ListItem
                 className="location-list-item"
@@ -218,7 +218,7 @@ const LocationList = ({
                 secondaryAction={(
                   <div>
                     <Tooltip title={commonStrings.UPDATE}>
-                      <IconButton edge="end" href={`/update-location?l=${location._id}`}>
+                      <IconButton edge="end" href={`/update-location?loc=${location._id}`}>
                         <EditIcon />
                       </IconButton>
                     </Tooltip>

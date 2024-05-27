@@ -7,7 +7,8 @@ import {
   SxProps,
   Theme,
   TextFieldVariants,
-  AutocompleteInputChangeReason
+  AutocompleteInputChangeReason,
+  Chip
 } from '@mui/material'
 import { LocationOn as LocationIcon, AccountCircle } from '@mui/icons-material'
 import * as bookcarsTypes from ':bookcars-types'
@@ -111,6 +112,10 @@ const MultipleSelect = ({
           if (init) {
             if (!event) {
               setInputValue(value)
+              if (onInputChange) {
+                onInputChange(event, value)
+              }
+
               setOpen(false)
               return
             }
@@ -147,6 +152,13 @@ const MultipleSelect = ({
           } else {
             const value = (newValue && [newValue]) || []
             setValues(value)
+
+            const val = (newValue && newValue.name) || ''
+            setInputValue(val)
+            if (onInputChange) {
+              onInputChange(event, val)
+            }
+
             if (callbackFromMultipleSelect) {
               callbackFromMultipleSelect(value, key, reference)
             }
@@ -295,6 +307,9 @@ const MultipleSelect = ({
         onClose={() => {
           setOpen(false)
         }}
+        renderTags={(tagValue, getTagProps) => tagValue.map((option, index) => (
+          <Chip {...getTagProps({ index })} key={option._id} label={option.name} />
+        ))}
         renderOption={(props, option) => {
           if (type === bookcarsTypes.RecordType.User) {
             return (

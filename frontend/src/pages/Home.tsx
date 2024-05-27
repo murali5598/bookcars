@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { FormControl, Button } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { DateTimeValidationError } from '@mui/x-date-pickers'
+import env from '../config/env.config'
 import * as bookcarsTypes from ':bookcars-types'
 import { strings as commonStrings } from '../lang/common'
 import { strings } from '../lang/home'
 import * as UserService from '../services/UserService'
-import Master from '../components/Master'
+import Layout from '../components/Layout'
 import LocationSelectList from '../components/LocationSelectList'
 import DateTimePicker from '../components/DateTimePicker'
 
@@ -103,7 +104,7 @@ const Home = () => {
   const onLoad = () => { }
 
   return (
-    <Master onLoad={onLoad} strict={false}>
+    <Layout onLoad={onLoad} strict={false}>
       <div className="home">
         <div className="home-content">
           <div className="home-logo">
@@ -113,7 +114,15 @@ const Home = () => {
           <div className="home-search">
             <form onSubmit={handleSubmit} className="home-search-form">
               <FormControl className="pickup-location">
-                <LocationSelectList label={commonStrings.PICKUP_LOCATION} hidePopupIcon customOpen required variant="outlined" onChange={handlePickupLocationChange} />
+                <LocationSelectList
+                  label={commonStrings.PICKUP_LOCATION}
+                  hidePopupIcon
+                  customOpen={env.isMobile()}
+                  init={!env.isMobile()}
+                  required
+                  variant="outlined"
+                  onChange={handlePickupLocationChange}
+                />
               </FormControl>
               <FormControl className="from">
                 <DateTimePicker
@@ -182,7 +191,8 @@ const Home = () => {
                   <LocationSelectList
                     label={commonStrings.DROP_OFF_LOCATION}
                     hidePopupIcon
-                    customOpen
+                    customOpen={env.isMobile()}
+                    init={!env.isMobile()}
                     required
                     variant="outlined"
                     onChange={handleDropOffLocationChange}
@@ -216,7 +226,7 @@ const Home = () => {
           </div>
         </footer>
       </div>
-    </Master>
+    </Layout>
   )
 }
 

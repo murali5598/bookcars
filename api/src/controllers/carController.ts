@@ -26,7 +26,7 @@ export const create = async (req: Request, res: Response) => {
 
   try {
     if (!body.image) {
-      logger.error(`[car.create] ${i18n.t('CAR_IMAGE_REQUIRED')} ${body}`)
+      logger.error(`[car.create] ${i18n.t('CAR_IMAGE_REQUIRED')} ${JSON.stringify(body)}`)
       return res.status(400).send(i18n.t('CAR_IMAGE_REQUIRED'))
     }
 
@@ -50,7 +50,7 @@ export const create = async (req: Request, res: Response) => {
 
     return res.json(car)
   } catch (err) {
-    logger.error(`[car.create] ${i18n.t('DB_ERROR')} ${body}`, err)
+    logger.error(`[car.create] ${i18n.t('DB_ERROR')} ${JSON.stringify(body)}`, err)
     return res.status(400).send(i18n.t('ERROR') + err)
   }
 }
@@ -399,7 +399,7 @@ export const getCars = async (req: Request, res: Response) => {
     const size = Number.parseInt(req.params.size, 10)
     const suppliers = body.suppliers.map((id) => new mongoose.Types.ObjectId(id))
     const {
-      fuel,
+      carType,
       gearbox,
       mileage,
       deposit,
@@ -412,8 +412,8 @@ export const getCars = async (req: Request, res: Response) => {
       $and: [{ name: { $regex: keyword, $options: options } }, { supplier: { $in: suppliers } }],
     }
 
-    if (fuel) {
-      $match.$and!.push({ type: { $in: fuel } })
+    if (carType) {
+      $match.$and!.push({ type: { $in: carType } })
     }
 
     if (gearbox) {
@@ -479,7 +479,7 @@ export const getCars = async (req: Request, res: Response) => {
         },
         {
           $facet: {
-            resultData: [{ $sort: { name: 1 } }, { $skip: (page - 1) * size }, { $limit: size }],
+            resultData: [{ $sort: { name: 1, _id: 1 } }, { $skip: (page - 1) * size }, { $limit: size }],
             pageInfo: [
               {
                 $count: 'totalRecords',
@@ -533,7 +533,7 @@ export const getBookingCars = async (req: Request, res: Response) => {
             ],
           },
         },
-        { $sort: { name: 1 } },
+        { $sort: { name: 1, _id: 1 } },
         { $skip: (page - 1) * size },
         { $limit: size },
       ],
@@ -564,7 +564,7 @@ export const getFrontendCars = async (req: Request, res: Response) => {
     const suppliers = body.suppliers.map((id) => new mongoose.Types.ObjectId(id))
     const pickupLocation = new mongoose.Types.ObjectId(body.pickupLocation)
     const {
-      fuel,
+      carType,
       gearbox,
       mileage,
       deposit,
@@ -574,7 +574,7 @@ export const getFrontendCars = async (req: Request, res: Response) => {
       $and: [
         { supplier: { $in: suppliers } },
         { locations: pickupLocation },
-        { available: true }, { type: { $in: fuel } },
+        { available: true }, { type: { $in: carType } },
         { gearbox: { $in: gearbox } },
       ],
     }
@@ -627,7 +627,7 @@ export const getFrontendCars = async (req: Request, res: Response) => {
         },
         {
           $facet: {
-            resultData: [{ $sort: { name: 1 } }, { $skip: (page - 1) * size }, { $limit: size }],
+            resultData: [{ $sort: { price: 1, name: 1, _id: 1 } }, { $skip: (page - 1) * size }, { $limit: size }],
             pageInfo: [
               {
                 $count: 'totalRecords',

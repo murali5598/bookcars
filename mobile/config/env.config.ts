@@ -11,7 +11,11 @@ import {
   BC_CAR_IMAGE_WIDTH,
   BC_CAR_IMAGE_HEIGHT,
   BC_MINIMUM_AGE,
-  BC_STRIPE_PUBLISHABLE_KEY
+  BC_STRIPE_PUBLISHABLE_KEY,
+  BC_STRIPE_MERCHANT_IDENTIFIER,
+  BC_STRIPE_COUNTRY_CODE,
+  BC_STRIPE_CURRENCY_CODE,
+  BC_CURRENCY,
 } from '@env'
 
 /**
@@ -156,3 +160,32 @@ export const MINIMUM_AGE: number = Number.parseInt(BC_MINIMUM_AGE, 10) || 21
  * @type {string}
  */
 export const STRIPE_PUBLISHABLE_KEY: string = BC_STRIPE_PUBLISHABLE_KEY
+
+/**
+ * The merchant identifier you registered with Apple for use with Apple Pay.
+ *
+ * @type {string}
+ */
+export const STRIPE_MERCHANT_IDENTIFIER: string = BC_STRIPE_MERCHANT_IDENTIFIER
+
+/**
+ * The two-letter ISO 3166 code of the country of your business, e.g. "US". Required for Stripe payments.
+ *
+ * @type {string}
+ */
+export const STRIPE_COUNTRY_CODE: string = BC_STRIPE_COUNTRY_CODE
+
+/**
+ * The three-letter ISO 4217 alphabetic currency code, e.g. "USD" or "EUR". Required for Stripe payments.
+ * Must be a supported currency: https://docs.stripe.com/currencies
+ *
+ * @type {string}
+ */
+export const STRIPE_CURRENCY_CODE: string = BC_STRIPE_CURRENCY_CODE
+
+/**
+ * Currency. Default is $.
+ *
+ * @type {string}
+ */
+export const CURRENCY: string = BC_CURRENCY

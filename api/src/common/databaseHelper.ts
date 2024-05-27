@@ -113,7 +113,7 @@ export const initialize = async (): Promise<boolean> => {
     const bookingIndex = bookingIndexes.find((index: any) => index.name === BOOKING_EXPIRE_AT_INDEX_NAME && index.expireAfterSeconds !== env.BOOKING_EXPIRE_AT)
     if (bookingIndex) {
       try {
-        await Booking.collection.dropIndex(bookingIndex.name)
+        await Booking.collection.dropIndex(bookingIndex.name!)
       } catch (err) {
         logger.error('Failed dropping Booking TTL index', err)
       } finally {
@@ -129,7 +129,7 @@ export const initialize = async (): Promise<boolean> => {
     const tokenIndex = tokenIndexes.find((index: any) => index.name.includes(TOKEN_EXPIRE_AT_INDEX_NAME))
     if (tokenIndex) {
       try {
-        await Token.collection.dropIndex(tokenIndex.name)
+        await Token.collection.dropIndex(tokenIndex.name!)
       } catch (err) {
         logger.error('Failed dropping Token TTL index', err)
       } finally {
@@ -141,6 +141,48 @@ export const initialize = async (): Promise<boolean> => {
     return true
   } catch (err) {
     logger.error('An error occured while initializing database:', err)
+    return false
+  }
+}
+
+/**
+ * Initialize locations.
+ * If a new language is added, english values will be added by default with the new language.
+ * The new language values must be updated from the backend.
+ *
+ * @async
+ * @returns {*}
+ */
+export const InitializeLocations = async () => {
+  try {
+    logger.info('Initializing locations...')
+    const locations = await Location.find({})
+      .populate<{ values: env.LocationValue[] }>({
+        path: 'values',
+        model: 'LocationValue',
+      })
+
+    for (const location of locations) {
+      const enLocationValue = location.values.find((val) => val.language === 'en')
+
+      if (enLocationValue) {
+        for (const lang of env.LANGUAGES) {
+          if (!location.values.some((val) => val.language === lang)) {
+            const langLocationValue = new LocationValue({ language: lang, value: enLocationValue.value })
+            await langLocationValue.save()
+            const loc = await Location.findById(location.id)
+            loc?.values.push(new mongoose.Types.ObjectId(String(langLocationValue.id)))
+            await loc?.save()
+          }
+        }
+      } else {
+        console.log('English value not found for location:', location.id)
+      }
+    }
+    logger.info('Locations initialized')
+    return true
+  } catch (err) {
+    logger.error('Error while initializing locations:', err)
     return false
   }
 }

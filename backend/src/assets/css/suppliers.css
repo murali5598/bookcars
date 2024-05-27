@@ -1,5 +1,7 @@
 div.suppliers {
   display: flex;
+  flex: 1 0 auto;
+  transform: translate3d(0, 0, 0);
 }
 
 div.suppliers .search {
@@ -14,7 +16,7 @@ div.suppliers .info-box {
 
 /* Device width is less than or equal to 960px */
 
-@media only screen and (width <= 960px) {
+@media only screen and (width <=960px) {
   div.suppliers {
     flex-direction: column;
   }
@@ -49,12 +51,13 @@ div.suppliers .info-box {
     padding: 1px;
     display: flex;
     justify-content: center;
+    flex-direction: column;
   }
 }
 
 /* Device width is greater than or equal to 960px */
 
-@media only screen and (width >= 960px) {
+@media only screen and (width >=960px) {
   div.suppliers {
     flex-direction: row;
   }

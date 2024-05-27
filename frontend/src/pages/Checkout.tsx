@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   OutlinedInput,
@@ -29,6 +29,7 @@ import {
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
+import CarList from '../components/CarList'
 import * as bookcarsTypes from ':bookcars-types'
 import * as bookcarsHelper from ':bookcars-helper'
 import env from '../config/env.config'
@@ -41,7 +42,7 @@ import * as UserService from '../services/UserService'
 import * as CarService from '../services/CarService'
 import * as LocationService from '../services/LocationService'
 import * as StripeService from '../services/StripeService'
-import Master from '../components/Master'
+import Layout from '../components/Layout'
 import Error from '../components/Error'
 import DatePicker from '../components/DatePicker'
 import NoMatch from './NoMatch'
@@ -53,7 +54,7 @@ import '../assets/css/checkout.css'
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
 //
-const stripePromise = loadStripe(env.STRIPE_PUBLISHABLE_KEY as string)
+const stripePromise = loadStripe(env.STRIPE_PUBLISHABLE_KEY)
 
 const Checkout = () => {
   const location = useLocation()
@@ -101,11 +102,7 @@ const Checkout = () => {
   const [payLater, setPayLater] = useState(false)
 
   const [adManuallyChecked, setAdManuallyChecked] = useState(false)
-  const [adFullName, setAdFullName] = useState(false)
-  const [adEmail, setAdEmail] = useState(false)
-  const [adPhone, setAdPhone] = useState(false)
-  const [adBirthDate, setAdBirthDate] = useState(false)
-  const adRequired = adManuallyChecked || adFullName || adEmail || adPhone || adBirthDate
+  const adRequired = true
 
   const [paymentFailed, setPaymentFailed] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -122,24 +119,6 @@ const Checkout = () => {
     format(from, _format, { locale: _locale }),
   )} 
   - ${bookcarsHelper.capitalize(format(to, _format, { locale: _locale }))})`
-
-  const adValidate = (val?: string | Date | null) => !!val
-
-  useEffect(() => {
-    setAdFullName(adValidate(addiontalDriverFullName))
-  }, [addiontalDriverFullName])
-
-  useEffect(() => {
-    setAdEmail(adValidate(addiontalDriverEmail))
-  }, [addiontalDriverEmail])
-
-  useEffect(() => {
-    setAdPhone(adValidate(addiontalDriverPhone))
-  }, [addiontalDriverPhone])
-
-  useEffect(() => {
-    setAdBirthDate(adValidate(addiontalDriverBirthDate))
-  }, [addiontalDriverBirthDate])
 
   const handleCancellationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (car && from && to) {
@@ -423,7 +402,7 @@ const Checkout = () => {
         }
       }
 
-      if (adRequired && additionalDriver) {
+      if (adManuallyChecked && additionalDriver) {
         const _emailValid = _validateEmail(addiontalDriverEmail)
         if (!_emailValid) {
           return
@@ -491,9 +470,7 @@ const Checkout = () => {
       if (!payLater) {
         const payload: bookcarsTypes.CreatePaymentPayload = {
           amount: price,
-          // Supported currencies for the moment: usd, eur
-          // Must be a supported currency: https://docs.stripe.com/currencies
-          currency: commonStrings.CURRENCY === '$' ? 'usd' : commonStrings.CURRENCY === '€' ? 'eur' : '',
+          currency: env.STRIPE_CURRENCY_CODE,
           locale: language,
           receiptEmail: (!authenticated ? driver?.email : user?.email) as string,
           name: `${car.name} 
@@ -603,7 +580,6 @@ const Checkout = () => {
       setTheftProtection(included(_car.theftProtection))
       setCollisionDamageWaiver(included(_car.collisionDamageWaiver))
       setFullInsurance(included(_car.fullInsurance))
-      setAdditionalDriver(included(_car.additionalDriver))
       setVisible(true)
     } catch (err) {
       helper.error(err)
@@ -611,7 +587,7 @@ const Checkout = () => {
   }
 
   return (
-    <Master onLoad={onLoad} strict={false}>
+    <Layout onLoad={onLoad} strict={false}>
       {visible && car && from && to && pickupLocation && dropOffLocation && (
         <div className="booking">
           <Paper className="booking-form" elevation={10}>
@@ -622,6 +598,13 @@ const Checkout = () => {
             </h1>
             <form onSubmit={handleSubmit}>
               <div>
+
+                <CarList
+                  cars={[car]}
+                  hidePrice
+                  sizeAuto
+                />
+
                 <div className="booking-options-container">
                   <div className="booking-info">
                     <BookingIcon />
@@ -630,7 +613,7 @@ const Checkout = () => {
                   <div className="booking-options">
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.cancellation === -1 || car.cancellation === 0}
+                        disabled={car.cancellation === -1 || car.cancellation === 0 || !!clientSecret}
                         control={<Switch checked={cancellation} onChange={handleCancellationChange} color="primary" />}
                         label={(
                           <span>
@@ -643,7 +626,7 @@ const Checkout = () => {
 
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.amendments === -1 || car.amendments === 0}
+                        disabled={car.amendments === -1 || car.amendments === 0 || !!clientSecret}
                         control={<Switch checked={amendments} onChange={handleAmendmentsChange} color="primary" />}
                         label={(
                           <span>
@@ -656,7 +639,7 @@ const Checkout = () => {
 
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.collisionDamageWaiver === -1 || car.collisionDamageWaiver === 0}
+                        disabled={car.collisionDamageWaiver === -1 || car.collisionDamageWaiver === 0 || !!clientSecret}
                         control={<Switch checked={collisionDamageWaiver} onChange={handleCollisionDamageWaiverChange} color="primary" />}
                         label={(
                           <span>
@@ -669,7 +652,7 @@ const Checkout = () => {
 
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.theftProtection === -1 || car.theftProtection === 0}
+                        disabled={car.theftProtection === -1 || car.theftProtection === 0 || !!clientSecret}
                         control={<Switch checked={theftProtection} onChange={handleTheftProtectionChange} color="primary" />}
                         label={(
                           <span>
@@ -682,7 +665,7 @@ const Checkout = () => {
 
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.fullInsurance === -1 || car.fullInsurance === 0}
+                        disabled={car.fullInsurance === -1 || car.fullInsurance === 0 || !!clientSecret}
                         control={<Switch checked={fullInsurance} onChange={handleFullInsuranceChange} color="primary" />}
                         label={(
                           <span>
@@ -695,7 +678,7 @@ const Checkout = () => {
 
                     <FormControl fullWidth margin="dense">
                       <FormControlLabel
-                        disabled={car.additionalDriver === -1 || car.additionalDriver === 0}
+                        disabled={car.additionalDriver === -1 || !!clientSecret}
                         control={<Switch checked={additionalDriver} onChange={handleAdditionalDriverChange} color="primary" />}
                         label={(
                           <span>
@@ -747,6 +730,7 @@ const Checkout = () => {
                     </div>
                   </div>
                 </div>
+
                 {!authenticated && (
                   <div className="driver-details">
                     <div className="booking-info">
@@ -826,7 +810,8 @@ const Checkout = () => {
                     </div>
                   </div>
                 )}
-                {additionalDriver && (
+
+                {(adManuallyChecked && additionalDriver) && (
                   <div className="driver-details">
                     <div className="booking-info">
                       <DriverIcon />
@@ -1006,7 +991,7 @@ const Checkout = () => {
       )}
       {noMatch && <NoMatch hideHeader />}
       {success && <Info message={payLater ? strings.PAY_LATER_SUCCESS : strings.SUCCESS} />}
-    </Master>
+    </Layout>
   )
 }
 

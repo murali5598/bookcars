@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import ReCAPTCHA from 'react-google-recaptcha'
+import React, { useCallback, useState } from 'react'
+import { GoogleReCaptcha } from 'react-google-recaptcha-v3'
 import {
   OutlinedInput,
   InputLabel,
@@ -19,7 +19,7 @@ import env from '../config/env.config'
 import { strings as commonStrings } from '../lang/common'
 import { strings } from '../lang/sign-up'
 import * as UserService from '../services/UserService'
-import Master from '../components/Master'
+import Layout from '../components/Layout'
 import Error from '../components/Error'
 import Backdrop from '../components/SimpleBackdrop'
 import DatePicker from '../components/DatePicker'
@@ -144,10 +144,10 @@ const SignUp = () => {
     setConfirmPassword(e.target.value)
   }
 
-  const handleRecaptchaVerify = (token: string | null) => {
+  const handleRecaptchaVerify = useCallback((token: string | null) => {
     setReCaptchaToken(token || '')
     setRecaptchaError(!token)
-  }
+  }, [])
 
   const handleTosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTosChecked(e.target.checked)
@@ -239,7 +239,6 @@ const SignUp = () => {
           setPasswordsDontMatch(false)
           setError(true)
           setTosError(false)
-          setLoading(false)
         }
       } else {
         setPasswordError(false)
@@ -249,12 +248,14 @@ const SignUp = () => {
         setTosError(false)
       }
     } catch (err) {
-      helper.error(err)
+      console.error(err)
       setPasswordError(false)
       setRecaptchaError(false)
       setPasswordsDontMatch(false)
       setError(true)
       setTosError(false)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -268,7 +269,7 @@ const SignUp = () => {
   }
 
   return (
-    <Master strict={false} onLoad={onLoad}>
+    <Layout strict={false} onLoad={onLoad}>
       {visible && (
         <div className="signup">
           <Paper className="signup-form" elevation={10}>
@@ -367,11 +368,7 @@ const SignUp = () => {
 
                 {env.RECAPTCHA_ENABLED && (
                   <div className="recaptcha">
-                    <ReCAPTCHA
-                      sitekey={env.RECAPTCHA_SITE_KEY || ''}
-                      hl={language}
-                      onChange={handleRecaptchaVerify}
-                    />
+                    <GoogleReCaptcha onVerify={handleRecaptchaVerify} />
                   </div>
                 )}
 
@@ -413,7 +410,7 @@ const SignUp = () => {
         </div>
       )}
       {loading && <Backdrop text={commonStrings.PLEASE_WAIT} />}
-    </Master>
+    </Layout>
   )
 }
 

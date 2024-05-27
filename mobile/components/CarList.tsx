@@ -17,11 +17,14 @@ interface CarListProps {
   suppliers?: string[]
   pickupLocation?: string
   dropOffLocation?: string
-  fuel?: string[]
+  carType?: string[]
   gearbox?: string[]
   mileage?: string[]
   deposit?: number
   header?: React.ReactElement
+  cars?: bookcarsTypes.Car[]
+  hidePrice?: boolean
+  footerComponent?: React.ReactElement
   onLoad?: bookcarsTypes.DataEvent<bookcarsTypes.Car>
 }
 
@@ -32,11 +35,14 @@ const CarList = ({
   suppliers,
   pickupLocation,
   dropOffLocation,
-  fuel,
+  carType: _carType,
   gearbox,
   mileage,
   deposit,
   header,
+  cars,
+  hidePrice,
+  footerComponent,
   onLoad
 }: CarListProps) => {
   const [language, setLanguage] = useState(env.DEFAULT_LANGUAGE)
@@ -64,7 +70,7 @@ const CarList = ({
     _page: number,
     _suppliers?: string[],
     _pickupLocation?: string,
-    _fuel?: string[],
+    __carType?: string[],
     _gearbox?: string[],
     _mileage?: string[],
     _deposit?: number
@@ -74,10 +80,10 @@ const CarList = ({
         setLoading(true)
         setFetch(true)
 
-        const payload = {
+        const payload: bookcarsTypes.GetCarsPayload = {
           suppliers: _suppliers,
           pickupLocation: _pickupLocation,
-          fuel: _fuel,
+          carType: __carType,
           gearbox: _gearbox,
           mileage: _mileage,
           deposit: _deposit,
@@ -110,8 +116,8 @@ const CarList = ({
 
   useEffect(() => {
     if (suppliers) {
-      if (suppliers.length > 0) {
-        fetchData(page, suppliers, pickupLocation, fuel, gearbox, mileage, deposit)
+      if (suppliers.length > 0 && pickupLocation && _carType && gearbox && mileage && deposit) {
+        fetchData(page, suppliers, pickupLocation, _carType, gearbox, mileage, deposit)
       } else {
         setRows([])
         setFetch(false)
@@ -120,17 +126,28 @@ const CarList = ({
         }
       }
     } // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, suppliers, pickupLocation, fuel, gearbox, mileage, deposit])
+  }, [page, suppliers, pickupLocation, _carType, gearbox, mileage, deposit])
 
   useEffect(() => {
     setPage(1)
-  }, [suppliers, pickupLocation, fuel, gearbox, mileage, deposit])
+  }, [suppliers, pickupLocation, _carType, gearbox, mileage, deposit])
+
+  useEffect(() => {
+    if (cars) {
+      setRows(cars)
+      setFetch(false)
+      if (onLoad) {
+        onLoad({ rows: cars, rowCount: cars.length })
+      }
+      setLoading(false)
+    }
+  }, [cars]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const numToRender = Math.floor(env.CARS_PAGE_SIZE / 2)
 
   return (
     <View style={styles.container}>
-      {from && to && pickupLocation && dropOffLocation && (
+      {((from && to && pickupLocation && dropOffLocation) || hidePrice) && (
         <FlatList
           keyboardShouldPersistTaps="handled"
           initialNumToRender={numToRender}
@@ -149,6 +166,7 @@ const CarList = ({
               pickupLocation={pickupLocation}
               dropOffLocation={dropOffLocation}
               navigation={navigation}
+              hidePrice={hidePrice}
             />
           )}
           keyExtractor={(item) => item._id}
@@ -161,9 +179,9 @@ const CarList = ({
           }}
           ListHeaderComponent={header}
           ListFooterComponent={
-            fetch
+            footerComponent || (fetch
               ? <ActivityIndicator size="large" color="#f37022" style={styles.indicator} />
-              : <></>
+              : <></>)
           }
           ListEmptyComponent={
             !loading ? (

@@ -34,7 +34,7 @@ const createBookingIndex = async (expireAfterSeconds: number): Promise<void> => 
 }
 
 const delay = async () => {
-  await testHelper.delay(3 * 1000)
+  await testHelper.delay(5 * 1000)
 }
 
 describe('Test database initialization', () => {
@@ -55,8 +55,8 @@ describe('Test database initialization', () => {
 
     if (tokenIndex) {
       const { expireAfterSeconds } = tokenIndex
-      await Token.collection.dropIndex(tokenIndex.name)
-      await createTokenIndex(expireAfterSeconds + 1)
+      await Token.collection.dropIndex(tokenIndex.name!)
+      await createTokenIndex(expireAfterSeconds! + 1)
       await delay()
       res = await databaseHelper.initialize()
       expect(res).toBeTruthy()
@@ -69,8 +69,8 @@ describe('Test database initialization', () => {
 
     if (bookingIndex) {
       const { expireAfterSeconds } = bookingIndex
-      await Booking.collection.dropIndex(bookingIndex.name)
-      await createBookingIndex(expireAfterSeconds + 1)
+      await Booking.collection.dropIndex(bookingIndex.name!)
+      await createBookingIndex(expireAfterSeconds! + 1)
       await delay()
       res = await databaseHelper.initialize()
       expect(res).toBeTruthy()

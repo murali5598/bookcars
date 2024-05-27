@@ -375,7 +375,7 @@ const BookingList = ({
         }
       }
     }
-  }, [containerClassName, page, fetch, loading, offset]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [containerClassName, page, fetch, loading, offset])
 
   const handleCancelUpdate = () => {
     setOpenUpdateDialog(false)
@@ -643,6 +643,7 @@ const BookingList = ({
               setSelectedIds(Array.from(new Set(_selectedIds)).map((id) => id.toString()))
             }}
             disableRowSelectionOnClick
+            className="booking-grid"
           />
         ))}
       <Dialog disableEscapeKeyDown maxWidth="xs" open={openUpdateDialog}>

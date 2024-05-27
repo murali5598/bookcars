@@ -6,11 +6,11 @@ import env from '../config/env.config'
 import * as helper from '../common/helper'
 import * as LocationService from '../services/LocationService'
 import * as SupplierService from '../services/SupplierService'
-import Master from '../components/Master'
+import Layout from '../components/Layout'
 import NoMatch from './NoMatch'
 import CarFilter from '../components/CarFilter'
 import SupplierFilter from '../components/SupplierFilter'
-import FuelFilter from '../components/FuelFilter'
+import CarType from '../components/CarTypeFilter'
 import GearboxFilter from '../components/GearboxFilter'
 import MileageFilter from '../components/MileageFilter'
 import DepositFilter from '../components/DepositFilter'
@@ -30,7 +30,7 @@ const Search = () => {
   const [allSuppliers, setAllSuppliers] = useState<bookcarsTypes.User[]>([])
   const [suppliers, setSuppliers] = useState<string[]>()
   const [loading, setLoading] = useState(true)
-  const [fuel, setFuel] = useState([bookcarsTypes.CarType.Diesel, bookcarsTypes.CarType.Gasoline])
+  const [carType, setCarType] = useState(bookcarsHelper.getAllCarTypes())
   const [gearbox, setGearbox] = useState([bookcarsTypes.GearboxType.Automatic, bookcarsTypes.GearboxType.Manual])
   const [mileage, setMileage] = useState([bookcarsTypes.Mileage.Limited, bookcarsTypes.Mileage.Unlimited])
   const [deposit, setDeposit] = useState(-1)
@@ -46,8 +46,8 @@ const Search = () => {
     setTo(filter.to)
   }
 
-  const handleFuelFilterChange = (values: bookcarsTypes.CarType[]) => {
-    setFuel(values)
+  const handleCarTypeFilterChange = (values: bookcarsTypes.CarType[]) => {
+    setCarType(values)
   }
 
   const handleGearboxFilterChange = (values: bookcarsTypes.GearboxType[]) => {
@@ -122,7 +122,7 @@ const Search = () => {
   }
 
   return (
-    <Master onLoad={onLoad} strict={false}>
+    <Layout onLoad={onLoad} strict={false}>
       {visible && suppliers && pickupLocation && dropOffLocation && from && to && (
         <div className="cars">
           <div className="col-1">
@@ -130,7 +130,7 @@ const Search = () => {
               <>
                 <CarFilter className="filter" pickupLocation={pickupLocation} dropOffLocation={dropOffLocation} from={from} to={to} onSubmit={handleCarFilterSubmit} />
                 <SupplierFilter className="filter" suppliers={allSuppliers} onChange={handleSupplierFilterChange} collapse={!env.isMobile()} />
-                <FuelFilter className="filter" onChange={handleFuelFilterChange} />
+                <CarType className="filter" onChange={handleCarTypeFilterChange} />
                 <GearboxFilter className="filter" onChange={handleGearboxFilterChange} />
                 <MileageFilter className="filter" onChange={handleMileageFilterChange} />
                 <DepositFilter className="filter" onChange={handleDepositFilterChange} />
@@ -140,7 +140,7 @@ const Search = () => {
           <div className="col-2">
             <CarList
               suppliers={suppliers}
-              fuel={fuel}
+              carType={carType}
               gearbox={gearbox}
               mileage={mileage}
               deposit={deposit}
@@ -154,7 +154,7 @@ const Search = () => {
         </div>
       )}
       {noMatch && <NoMatch hideHeader />}
-    </Master>
+    </Layout>
   )
 }
 

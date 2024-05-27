@@ -18,11 +18,7 @@ import 'react-toastify/dist/ReactToastify.min.css'
 import './assets/css/common.css'
 import './assets/css/index.css'
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-)
-
-if (process.env.REACT_APP_NODE_ENV === 'production') {
+if (import.meta.env.VITE_NODE_ENV === 'production') {
   disableDevTools()
 }
 
@@ -103,7 +99,7 @@ const theme = createTheme(
   isFr ? corefrFR : coreenUS,
 )
 
-root.render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider theme={theme}>
     <CssBaseline>
       <App />

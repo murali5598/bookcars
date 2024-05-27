@@ -11,7 +11,11 @@ export enum AppType {
 
 export enum CarType {
   Diesel = 'diesel',
-  Gasoline = 'gasoline'
+  Gasoline = 'gasoline',
+  Electric = 'electric',
+  Hybrid = 'hybrid',
+  PlugInHybrid = 'plugInHybrid',
+  Unknown = 'unknown'
 }
 
 export enum GearboxType {
@@ -159,7 +163,7 @@ export interface UpdateCarPayload extends CreateCarPayload {
 
 export interface GetCarsPayload {
   suppliers: string[]
-  fuel?: string[]
+  carType?: string[]
   gearbox?: string[]
   mileage?: string[]
   deposit?: number
@@ -372,8 +376,7 @@ export interface CreatePaymentPayload {
    */
   currency: string
   /**
-   * Three-letter ISO currency code, in lowercase.
-   * Must be a supported currency: https://docs.stripe.com/currencies
+   * The IETF language tag of the locale Checkout is displayed in. If blank or auto, the browser's locale is used.
    *
    * @type {string}
    */

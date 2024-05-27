@@ -1,8 +1,13 @@
 /* Header */
 .header {
+  position: -webkit-sticky !important;
   position: sticky !important;
   top: 0;
-  z-index: 101;
+  z-index: 1400;
+}
+
+.menu {
+  z-index: 1401 !important;
 }
 
 .header-action {
@@ -19,7 +24,7 @@
 
 /* Device width is greater than or equal to 960px */
 
-@media only screen and (width >= 960px) {
+@media only screen and (width >=960px) {
   .header {
     min-height: 64px;
   }
@@ -27,7 +32,7 @@
 
 /* Device width is less than or equal to 960px */
 
-@media only screen and (width <= 960px) {
+@media only screen and (width <=960px) {
   .header {
     min-height: 56px;
   }

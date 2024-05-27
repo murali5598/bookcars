@@ -24,6 +24,18 @@ export const __env__ = (name: string, required?: boolean, defaultValue?: string)
 }
 
 /**
+ * ISO 639-1 language codes supported
+ * https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+ *
+ * @type {string[]}
+ */
+export const LANGUAGES = [
+  'en',
+  'fr',
+  'el',
+]
+
+/**
  * Server Port. Default is 4002.
  *
  * @type {number}
@@ -281,6 +293,13 @@ export const STRIPE_SESSION_EXPIRE_AT = stripeSessionExpireAt
  * @type {number}
  */
 export const BOOKING_EXPIRE_AT = STRIPE_SESSION_EXPIRE_AT + (10 * 60)
+
+/**
+ * Private SSL key filepath.
+ *
+ * @type {string}
+ */
+export const ADMIN_EMAIL = __env__('BC_ADMIN_EMAIL', false)
 
 /**
  * User Document.

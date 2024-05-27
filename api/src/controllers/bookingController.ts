@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import escapeStringRegexp from 'escape-string-regexp'
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk'
 import { Request, Response } from 'express'
+import nodemailer from 'nodemailer'
 import * as bookcarsTypes from ':bookcars-types'
 import i18n from '../lang/i18n'
 import Booking from '../models/Booking'
@@ -42,56 +43,123 @@ export const create = async (req: Request, res: Response) => {
     await booking.save()
     return res.json(booking)
   } catch (err) {
-    logger.error(`[booking.create] ${i18n.t('DB_ERROR')} ${req.body}`, err)
+    logger.error(`[booking.create] ${i18n.t('DB_ERROR')} ${JSON.stringify(req.body)}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
 
 /**
- * Notify a supplier.
+ * Notify a supplier or admin.
  *
  * @async
- * @param {env.User} user
+ * @param {env.User} driver
  * @param {string} bookingId
- * @param {env.User} supplier
- * @param {string} notificationMessage
+ * @param {env.User} user
+ * @param {boolean} notificationMessage
  * @returns {void}
  */
-const notifySupplier = async (user: env.User, bookingId: string, supplier: env.User, notificationMessage: string) => {
-  i18n.locale = supplier.language
+export const notify = async (driver: env.User, bookingId: string, user: env.User, notificationMessage: string) => {
+  i18n.locale = user.language
 
   // notification
-  const message = `${user.fullName} ${notificationMessage} ${bookingId}.`
+  const message = `${driver.fullName} ${notificationMessage} ${bookingId}.`
   const notification = new Notification({
-    user: supplier._id,
+    user: user._id,
     message,
     booking: bookingId,
   })
 
   await notification.save()
-  let counter = await NotificationCounter.findOne({ user: supplier._id })
+  let counter = await NotificationCounter.findOne({ user: user._id })
   if (counter && typeof counter.count !== 'undefined') {
     counter.count += 1
     await counter.save()
   } else {
-    counter = new NotificationCounter({ user: supplier._id, count: 1 })
+    counter = new NotificationCounter({ user: user._id, count: 1 })
     await counter.save()
   }
 
   // mail
-  const mailOptions = {
-    from: env.SMTP_FROM,
-    to: supplier.email,
-    subject: message,
-    html: `<p>
-    ${i18n.t('HELLO')}${supplier.fullName},<br><br>
+  if (user.enableEmailNotifications) {
+    const mailOptions: nodemailer.SendMailOptions = {
+      from: env.SMTP_FROM,
+      to: user.email,
+      subject: message,
+      html: `<p>
+    ${i18n.t('HELLO')}${user.fullName},<br><br>
     ${message}<br><br>
-    ${helper.joinURL(env.BACKEND_HOST, `booking?b=${bookingId}`)}<br><br>
+    ${helper.joinURL(env.BACKEND_HOST, `update-booking?b=${bookingId}`)}<br><br>
     ${i18n.t('REGARDS')}<br>
     </p>`,
+    }
+
+    await mailHelper.sendMail(mailOptions)
+  }
+}
+
+/**
+ * Send checkout confirmation email to driver.
+ *
+ * @async
+ * @param {env.User} user
+ * @param {env.Booking} booking
+ * @param {boolean} payLater
+ * @returns {unknown}
+ */
+export const confirm = async (user: env.User, booking: env.Booking, payLater: boolean) => {
+  const { language } = user
+  const locale = language === 'fr' ? 'fr-FR' : 'en-US'
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    month: 'long',
+    year: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+  }
+  const from = booking.from.toLocaleString(locale, options)
+  const to = booking.to.toLocaleString(locale, options)
+  const car = await Car.findById(booking.car).populate<{ supplier: env.User }>('supplier')
+  if (!car) {
+    logger.info(`Car ${booking.car} not found`)
+    return false
+  }
+  const pickupLocation = await Location.findById(booking.pickupLocation).populate<{ values: env.LocationValue[] }>('values')
+  if (!pickupLocation) {
+    logger.info(`Pickup location ${booking.pickupLocation} not found`)
+    return false
   }
 
+  const pickupLocationName = pickupLocation.values.filter((value) => value.language === language)[0].value
+  const dropOffLocation = await Location.findById(booking.dropOffLocation).populate<{ values: env.LocationValue[] }>('values')
+  if (!dropOffLocation) {
+    logger.info(`Drop-off location ${booking.pickupLocation} not found`)
+    return false
+  }
+  const dropOffLocationName = dropOffLocation.values.filter((value) => value.language === language)[0].value
+
+  const mailOptions: nodemailer.SendMailOptions = {
+    from: env.SMTP_FROM,
+    to: user.email,
+    subject: `${i18n.t('BOOKING_CONFIRMED_SUBJECT_PART1')} ${booking._id} ${i18n.t('BOOKING_CONFIRMED_SUBJECT_PART2')}`,
+    html:
+      `<p>
+        ${i18n.t('HELLO')}${user.fullName},<br><br>
+        ${!payLater ? `${i18n.t('BOOKING_CONFIRMED_PART1')} ${booking._id} ${i18n.t('BOOKING_CONFIRMED_PART2')}`
+        + '<br><br>' : ''}
+        ${i18n.t('BOOKING_CONFIRMED_PART3')}${car.supplier.fullName}${i18n.t('BOOKING_CONFIRMED_PART4')}${pickupLocationName}${i18n.t('BOOKING_CONFIRMED_PART5')}`
+      + `${from} ${i18n.t('BOOKING_CONFIRMED_PART6')}`
+      + `${car.name}${i18n.t('BOOKING_CONFIRMED_PART7')}`
+      + `<br><br>${i18n.t('BOOKING_CONFIRMED_PART8')}<br><br>`
+      + `${i18n.t('BOOKING_CONFIRMED_PART9')}${car.supplier.fullName}${i18n.t('BOOKING_CONFIRMED_PART10')}${dropOffLocationName}${i18n.t('BOOKING_CONFIRMED_PART11')}`
+      + `${to} ${i18n.t('BOOKING_CONFIRMED_PART12')}`
+      + `<br><br>${i18n.t('BOOKING_CONFIRMED_PART13')}<br><br>${i18n.t('BOOKING_CONFIRMED_PART14')}${env.FRONTEND_HOST}<br><br>
+        ${i18n.t('REGARDS')}<br>
+        </p>`,
+  }
   await mailHelper.sendMail(mailOptions)
+
+  return true
 }
 
 /**
@@ -161,20 +229,20 @@ export const checkout = async (req: Request, res: Response) => {
 
       i18n.locale = user.language
 
-      const mailOptions = {
+      const mailOptions: nodemailer.SendMailOptions = {
         from: env.SMTP_FROM,
         to: user.email,
         subject: i18n.t('ACCOUNT_ACTIVATION_SUBJECT'),
         html: `<p>
         ${i18n.t('HELLO')}${user.fullName},<br><br>
         ${i18n.t('ACCOUNT_ACTIVATION_LINK')}<br><br>
-        ${helper.joinURL(env.FRONTEND_HOST, 'activate')}/?u=${encodeURIComponent(user._id.toString())}&e=${encodeURIComponent(user.email)}&t=${encodeURIComponent(token.token)}<br><br>
+        ${helper.joinURL(env.FRONTEND_HOST, 'activate')}/?u=${encodeURIComponent(user.id)}&e=${encodeURIComponent(user.email)}&t=${encodeURIComponent(token.token)}<br><br>
         ${i18n.t('REGARDS')}<br>
         </p>`,
       }
       await mailHelper.sendMail(mailOptions)
 
-      body.booking.driver = user._id.toString()
+      body.booking.driver = user.id
     } else {
       user = await User.findById(body.booking.driver)
     }
@@ -204,65 +272,30 @@ export const checkout = async (req: Request, res: Response) => {
 
     await booking.save()
 
-    const locale = language === 'fr' ? 'fr-FR' : 'en-US'
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      month: 'long',
-      year: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    }
-    const from = booking.from.toLocaleString(locale, options)
-    const to = booking.to.toLocaleString(locale, options)
-    const car = await Car.findById(booking.car).populate<{ supplier: env.User }>('supplier')
-    if (!car) {
-      logger.info(`Car ${booking.car} not found`)
-      return res.sendStatus(204)
-    }
-    const pickupLocation = await Location.findById(booking.pickupLocation).populate<{ values: env.LocationValue[] }>('values')
-    if (!pickupLocation) {
-      logger.info(`Pickup location ${booking.pickupLocation} not found`)
-      return res.sendStatus(204)
-    }
+    if (body.payLater) {
+      // Send confirmation email
+      if (!await confirm(user, booking, body.payLater)) {
+        return res.sendStatus(400)
+      }
 
-    const pickupLocationName = pickupLocation.values.filter((value) => value.language === language)[0].value
-    const dropOffLocation = await Location.findById(booking.dropOffLocation).populate<{ values: env.LocationValue[] }>('values')
-    if (!dropOffLocation) {
-      logger.info(`Drop-off location ${booking.pickupLocation} not found`)
-      return res.sendStatus(204)
-    }
-    const dropOffLocationName = dropOffLocation.values.filter((value) => value.language === language)[0].value
+      // Notify supplier
+      const supplier = await User.findById(booking.supplier)
+      if (!supplier) {
+        logger.info(`Supplier ${booking.supplier} not found`)
+        return res.sendStatus(204)
+      }
+      i18n.locale = supplier.language
+      let message = body.payLater ? i18n.t('BOOKING_PAY_LATER_NOTIFICATION') : i18n.t('BOOKING_PAID_NOTIFICATION')
+      await notify(user, booking._id.toString(), supplier, message)
 
-    const mailOptions = {
-      from: env.SMTP_FROM,
-      to: user.email,
-      subject: `${i18n.t('BOOKING_CONFIRMED_SUBJECT_PART1')} ${booking._id} ${i18n.t('BOOKING_CONFIRMED_SUBJECT_PART2')}`,
-      html:
-        `<p>
-        ${i18n.t('HELLO')}${user.fullName},<br><br>
-        ${!body.payLater ? `${i18n.t('BOOKING_CONFIRMED_PART1')} ${booking._id} ${i18n.t('BOOKING_CONFIRMED_PART2')}`
-          + '<br><br>' : ''}
-        ${i18n.t('BOOKING_CONFIRMED_PART3')}${car.supplier.fullName}${i18n.t('BOOKING_CONFIRMED_PART4')}${pickupLocationName}${i18n.t('BOOKING_CONFIRMED_PART5')}`
-        + `${from} ${i18n.t('BOOKING_CONFIRMED_PART6')}`
-        + `${car.name}${i18n.t('BOOKING_CONFIRMED_PART7')}`
-        + `<br><br>${i18n.t('BOOKING_CONFIRMED_PART8')}<br><br>`
-        + `${i18n.t('BOOKING_CONFIRMED_PART9')}${car.supplier.fullName}${i18n.t('BOOKING_CONFIRMED_PART10')}${dropOffLocationName}${i18n.t('BOOKING_CONFIRMED_PART11')}`
-        + `${to} ${i18n.t('BOOKING_CONFIRMED_PART12')}`
-        + `<br><br>${i18n.t('BOOKING_CONFIRMED_PART13')}<br><br>${i18n.t('BOOKING_CONFIRMED_PART14')}${env.FRONTEND_HOST}<br><br>
-        ${i18n.t('REGARDS')}<br>
-        </p>`,
+      // Notify admin
+      const admin = !!env.ADMIN_EMAIL && await User.findOne({ email: env.ADMIN_EMAIL, type: bookcarsTypes.UserType.Admin })
+      if (admin) {
+        i18n.locale = admin.language
+        message = body.payLater ? i18n.t('BOOKING_PAY_LATER_NOTIFICATION') : i18n.t('BOOKING_PAID_NOTIFICATION')
+        await notify(user, booking._id.toString(), admin, message)
+      }
     }
-    await mailHelper.sendMail(mailOptions)
-
-    // Notify supplier
-    const supplier = await User.findById(booking.supplier)
-    if (!supplier) {
-      logger.info(`Supplier ${booking.supplier} not found`)
-      return res.sendStatus(204)
-    }
-    i18n.locale = supplier.language
-    await notifySupplier(user, booking._id.toString(), supplier, i18n.t('BOOKING_NOTIFICATION'))
 
     return res.status(200).send({ bookingId: booking._id })
   } catch (err) {
@@ -305,24 +338,26 @@ const notifyDriver = async (booking: env.Booking) => {
   }
 
   // mail
-  const mailOptions = {
-    from: env.SMTP_FROM,
-    to: driver.email,
-    subject: message,
-    html: `<p>
+  if (driver.enableEmailNotifications) {
+    const mailOptions: nodemailer.SendMailOptions = {
+      from: env.SMTP_FROM,
+      to: driver.email,
+      subject: message,
+      html: `<p>
     ${i18n.t('HELLO')}${driver.fullName},<br><br>
     ${message}<br><br>
     ${helper.joinURL(env.FRONTEND_HOST, `booking?b=${booking._id}`)}<br><br>
     ${i18n.t('REGARDS')}<br>
     </p>`,
+    }
+    await mailHelper.sendMail(mailOptions)
   }
-  await mailHelper.sendMail(mailOptions)
 
   // push notification
   const pushToken = await PushToken.findOne({ user: driver._id })
   if (pushToken) {
     const { token } = pushToken
-    const expo = new Expo({ accessToken: env.EXPO_ACCESS_TOKEN })
+    const expo = new Expo({ accessToken: env.EXPO_ACCESS_TOKEN, useFcmV1: true })
 
     if (!Expo.isExpoPushToken(token)) {
       logger.info(`Push token ${token} is not a valid Expo push token.`)
@@ -484,7 +519,7 @@ export const update = async (req: Request, res: Response) => {
     logger.error('[booking.update] Booking not found:', body.booking._id)
     return res.sendStatus(204)
   } catch (err) {
-    logger.error(`[booking.update] ${i18n.t('DB_ERROR')} ${req.body}`, err)
+    logger.error(`[booking.update] ${i18n.t('DB_ERROR')} ${JSON.stringify(req.body)}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
@@ -516,7 +551,7 @@ export const updateStatus = async (req: Request, res: Response) => {
 
     return res.sendStatus(200)
   } catch (err) {
-    logger.error(`[booking.updateStatus] ${i18n.t('DB_ERROR')} ${req.body}`, err)
+    logger.error(`[booking.updateStatus] ${i18n.t('DB_ERROR')} ${JSON.stringify(req.body)}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
@@ -546,7 +581,7 @@ export const deleteBookings = async (req: Request, res: Response) => {
 
     return res.sendStatus(200)
   } catch (err) {
-    logger.error(`[booking.deleteBookings] ${i18n.t('DB_ERROR')} ${req.body}`, err)
+    logger.error(`[booking.deleteBookings] ${i18n.t('DB_ERROR')} ${JSON.stringify(req.body)}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
@@ -566,7 +601,7 @@ export const deleteTempBooking = async (req: Request, res: Response) => {
     await Booking.deleteOne({ _id: bookingId, sessionId, status: bookcarsTypes.BookingStatus.Void, expireAt: { $ne: null } })
     return res.sendStatus(200)
   } catch (err) {
-    logger.error(`[booking.deleteTempBooking] ${i18n.t('DB_ERROR')} ${{ bookingId, sessionId }}`, err)
+    logger.error(`[booking.deleteTempBooking] ${i18n.t('DB_ERROR')} ${JSON.stringify({ bookingId, sessionId })}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
@@ -823,7 +858,7 @@ export const getBookings = async (req: Request, res: Response) => {
       },
       {
         $facet: {
-          resultData: [{ $sort: { createdAt: -1 } }, { $skip: (page - 1) * size }, { $limit: size }],
+          resultData: [{ $sort: { createdAt: -1, _id: 1 } }, { $skip: (page - 1) * size }, { $limit: size }],
           pageInfo: [
             {
               $count: 'totalRecords',
@@ -842,7 +877,7 @@ export const getBookings = async (req: Request, res: Response) => {
 
     return res.json(data)
   } catch (err) {
-    logger.error(`[booking.getBookings] ${i18n.t('DB_ERROR')} ${req.body}`, err)
+    logger.error(`[booking.getBookings] ${i18n.t('DB_ERROR')} ${JSON.stringify(req.body)}`, err)
     return res.status(400).send(i18n.t('DB_ERROR') + err)
   }
 }
@@ -903,7 +938,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
       await booking.save()
 
       // Notify supplier
-      await notifySupplier(booking.driver, booking._id.toString(), booking.supplier, i18n.t('CANCEL_BOOKING_NOTIFICATION'))
+      await notify(booking.driver, booking._id.toString(), booking.supplier, i18n.t('CANCEL_BOOKING_NOTIFICATION'))
 
       return res.sendStatus(200)
     }
